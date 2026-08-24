@@ -13,7 +13,11 @@
 </p>
 
 <p align="center">
-  <img data-importer="snake" src="https://raw.githubusercontent.com/nrp02/nrp02/snake-output/snake.svg" alt="Snake animation" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/nrp02/nrp02/snake-output/snake-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/nrp02/nrp02/snake-output/snake.svg">
+    <img alt="Snake animation" src="https://raw.githubusercontent.com/nrp02/nrp02/snake-output/snake-dark.svg">
+  </picture>
 </p>
 
 <p align="center">
