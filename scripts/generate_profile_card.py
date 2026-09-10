@@ -3,6 +3,7 @@
 
 import json
 import os
+import re
 import sys
 import urllib.request
 from xml.sax.saxutils import escape
@@ -10,7 +11,7 @@ from xml.sax.saxutils import escape
 USERNAME = os.environ.get("GITHUB_USERNAME", "Nrp02")
 TOKEN = os.environ.get("GITHUB_TOKEN")
 API_ROOT = "https://api.github.com"
-TOP_N_LANGUAGES = 4
+TOP_N_LANGUAGES = 5
 
 BULLET_X = 470 
 NAME_MAX_CHARS = 12  
@@ -19,18 +20,30 @@ BAR_WIDTH = 340
 BAR_HEIGHT = 12
 BAR_FIRST_Y = 316
 BAR_ROW_SPACING = 32
-BAR_COLORS = ["#93a6ef", "#6d7fd6", "#dbe2fb", "#4a5386"]
+BAR_COLORS = ["#dbe2fb", "#93a6ef", "#6d7fd6", "#4a5386", "#3c4670"]  # lightest to darkest
 
-ROW_X = 470
 VALUE_RIGHT = 1060
 CHAR_W = 10.2  # widest advance in the template's monospace stack, at 17px
 
+# A ". Key: ... value" row: the dim dot run in the template is a single placeholder
+# dot that align_dot_leaders() below stretches to fit.
+ROW_RE = re.compile(
+    r'(?P<head><text x="(?P<x>\d+)" y="(?P<y>\d+)"><tspan class="dim">\. </tspan>'
+    r'<tspan class="key">(?P<key>[^<]+)</tspan><tspan class="dim">: )\.*'
+    r'(?P<tail> </tspan></text>\s*'
+    r'<text x="(?P<vx>\d+)" y="(?P=y)" text-anchor="end" class="value">(?P<value>[^<]*)</text>)'
+)
 
-def dot_leader(key, value):
-    """Dots filling the gap between a left-aligned key and a right-aligned value."""
-    key_end = ROW_X + len(f". {key}:") * CHAR_W
-    value_start = VALUE_RIGHT - len(value) * CHAR_W
-    return "." * max(1, int((value_start - key_end) / CHAR_W) - 2)
+
+def align_dot_leaders(svg):
+    """Fill each row's gap with dots, so no dot run has to be counted by hand."""
+    def fill(m):
+        key_end = int(m.group("x")) + len(f'. {m.group("key")}:') * CHAR_W
+        value_start = int(m.group("vx")) - len(m.group("value")) * CHAR_W
+        dots = "." * max(1, int((value_start - key_end) / CHAR_W) - 2)
+        return m.group("head") + dots + m.group("tail")
+
+    return ROW_RE.sub(fill, svg)
 
 
 def api_get(path):
@@ -132,18 +145,11 @@ def main():
         print(f"warning: could not fetch commit count via GraphQL: {exc}", file=sys.stderr)
         total_commits = "N/A"
 
-    repos_value = str(user.get("public_repos", len(repos)))
-    commits_value = str(total_commits)
-    followers_value = str(user.get("followers", 0))
-
     values = {
-        "{{REPOS}}": repos_value,
+        "{{REPOS}}": str(user.get("public_repos", len(repos))),
         "{{STARS}}": str(total_stars),
-        "{{COMMITS}}": commits_value,
-        "{{FOLLOWERS}}": followers_value,
-        "{{REPOS_DOTS}}": dot_leader("Repos", repos_value),
-        "{{COMMITS_DOTS}}": dot_leader("Commits", commits_value),
-        "{{FOLLOWERS_DOTS}}": dot_leader("Followers", followers_value),
+        "{{COMMITS}}": str(total_commits),
+        "{{FOLLOWERS}}": str(user.get("followers", 0)),
     }
 
     with open("assets/profile-card-template.svg", "r", encoding="utf-8") as f:
@@ -152,6 +158,7 @@ def main():
     svg = svg.replace("<!--{{LANGUAGE_STACK}}-->", language_stack_svg)
     for token, value in values.items():
         svg = svg.replace(token, value)
+    svg = align_dot_leaders(svg)  # after substitution: dot runs depend on the real values
 
     os.makedirs("dist", exist_ok=True)
     with open("dist/profile-card.svg", "w", encoding="utf-8") as f:
