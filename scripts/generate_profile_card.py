@@ -5,11 +5,19 @@ import json
 import os
 import sys
 import urllib.request
+from xml.sax.saxutils import escape
 
 USERNAME = os.environ.get("GITHUB_USERNAME", "Nrp02")
 TOKEN = os.environ.get("GITHUB_TOKEN")
 API_ROOT = "https://api.github.com"
 TOP_N_LANGUAGES = 4
+
+BAR_X = 470
+BAR_WIDTH = 380
+BAR_HEIGHT = 6
+BAR_FIRST_Y = 316
+BAR_ROW_SPACING = 34
+BAR_COLORS = ["#93a6ef", "#6d7fd6", "#dbe2fb", "#4a5386"]
 
 
 def api_get(path):
@@ -51,6 +59,29 @@ def fetch_languages(repo_full_name):
         return {}
 
 
+def build_language_stack_svg(language_bytes):
+    top = sorted(language_bytes.items(), key=lambda kv: kv[1], reverse=True)[:TOP_N_LANGUAGES]
+    if not top:
+        return f'<text x="{BAR_X}" y="{BAR_FIRST_Y}"><tspan class="dim">. </tspan><tspan class="value">No language data yet</tspan></text>'
+
+    shown_total = sum(count for _, count in top)
+    rows = []
+    for i, (lang, count) in enumerate(top):
+        pct = round(100 * count / shown_total) if shown_total else 0
+        y = BAR_FIRST_Y + i * BAR_ROW_SPACING
+        bar_y = y + BAR_HEIGHT
+        fill_width = round(BAR_WIDTH * pct / 100)
+        color = BAR_COLORS[i % len(BAR_COLORS)]
+        rows.append(
+            f'<text x="{BAR_X}" y="{y}"><tspan class="key">{escape(lang)}</tspan></text>'
+            f'<text x="{BAR_X + BAR_WIDTH}" y="{y}" text-anchor="end">'
+            f'<tspan class="value">{pct}%</tspan></text>'
+            f'<rect x="{BAR_X}" y="{bar_y}" width="{BAR_WIDTH}" height="{BAR_HEIGHT}" rx="3" fill="#3c4670"/>'
+            f'<rect x="{BAR_X}" y="{bar_y}" width="{fill_width}" height="{BAR_HEIGHT}" rx="3" fill="{color}"/>'
+        )
+    return "\n    ".join(rows)
+
+
 def fetch_total_commits():
     query = f'''
     {{
@@ -79,7 +110,7 @@ def main():
             continue
         for lang, byte_count in fetch_languages(repo["full_name"]).items():
             language_bytes[lang] = language_bytes.get(lang, 0) + byte_count
-    top_languages = sorted(language_bytes, key=language_bytes.get, reverse=True)[:TOP_N_LANGUAGES]
+    language_stack_svg = build_language_stack_svg(language_bytes)
 
     try:
         total_commits = fetch_total_commits()
@@ -92,12 +123,12 @@ def main():
         "{{STARS}}": str(total_stars),
         "{{COMMITS}}": str(total_commits),
         "{{FOLLOWERS}}": str(user.get("followers", 0)),
-        "{{LANGUAGES}}": ", ".join(top_languages) if top_languages else "N/A",
     }
 
     with open("assets/profile-card-template.svg", "r", encoding="utf-8") as f:
         svg = f.read()
 
+    svg = svg.replace("<!--{{LANGUAGE_STACK}}-->", language_stack_svg)
     for token, value in values.items():
         svg = svg.replace(token, value)
 
