@@ -13,14 +13,22 @@ API_ROOT = "https://api.github.com"
 TOP_N_LANGUAGES = 4
 
 BAR_X = 470
-BAR_WIDTH = 380
-BAR_HEIGHT = 10
+BAR_WIDTH = 590
+BAR_HEIGHT = 6
 BAR_FIRST_Y = 316
 BAR_ROW_SPACING = 34
 BAR_COLORS = ["#93a6ef", "#6d7fd6", "#dbe2fb", "#4a5386"]
-BAR_SEGMENTS = 10
-BAR_SEGMENT_GAP = 6
-BAR_SEGMENT_WIDTH = (BAR_WIDTH - (BAR_SEGMENTS - 1) * BAR_SEGMENT_GAP) / BAR_SEGMENTS
+
+ROW_X = 470
+VALUE_RIGHT = 1060
+CHAR_W = 10.2  # widest advance in the template's monospace stack, at 17px
+
+
+def dot_leader(key, value):
+    """Dots filling the gap between a left-aligned key and a right-aligned value."""
+    key_end = ROW_X + len(f". {key}:") * CHAR_W
+    value_start = VALUE_RIGHT - len(value) * CHAR_W
+    return "." * max(1, int((value_start - key_end) / CHAR_W) - 2)
 
 
 def api_get(path):
@@ -72,22 +80,15 @@ def build_language_stack_svg(language_bytes):
     for i, (lang, count) in enumerate(top):
         pct = round(100 * count / shown_total) if shown_total else 0
         y = BAR_FIRST_Y + i * BAR_ROW_SPACING
-        bar_y = y + 6
-        filled_segments = round(BAR_SEGMENTS * pct / 100)
+        bar_y = y + BAR_HEIGHT
+        fill_width = round(BAR_WIDTH * pct / 100)
         color = BAR_COLORS[i % len(BAR_COLORS)]
-        segments = []
-        for s in range(BAR_SEGMENTS):
-            seg_x = BAR_X + s * (BAR_SEGMENT_WIDTH + BAR_SEGMENT_GAP)
-            seg_fill = color if s < filled_segments else "#232c54"
-            segments.append(
-                f'<rect x="{seg_x:.1f}" y="{bar_y}" width="{BAR_SEGMENT_WIDTH:.1f}" '
-                f'height="{BAR_HEIGHT}" fill="{seg_fill}"/>'
-            )
         rows.append(
             f'<text x="{BAR_X}" y="{y}"><tspan class="key">{escape(lang)}</tspan></text>'
             f'<text x="{BAR_X + BAR_WIDTH}" y="{y}" text-anchor="end">'
             f'<tspan class="value">{pct}%</tspan></text>'
-            + "".join(segments)
+            f'<rect x="{BAR_X}" y="{bar_y}" width="{BAR_WIDTH}" height="{BAR_HEIGHT}" rx="0" fill="#3c4670"/>'
+            f'<rect x="{BAR_X}" y="{bar_y}" width="{fill_width}" height="{BAR_HEIGHT}" rx="0" fill="{color}"/>'
         )
     return "\n    ".join(rows)
 
@@ -128,11 +129,18 @@ def main():
         print(f"warning: could not fetch commit count via GraphQL: {exc}", file=sys.stderr)
         total_commits = "N/A"
 
+    repos_value = str(user.get("public_repos", len(repos)))
+    commits_value = str(total_commits)
+    followers_value = str(user.get("followers", 0))
+
     values = {
-        "{{REPOS}}": str(user.get("public_repos", len(repos))),
+        "{{REPOS}}": repos_value,
         "{{STARS}}": str(total_stars),
-        "{{COMMITS}}": str(total_commits),
-        "{{FOLLOWERS}}": str(user.get("followers", 0)),
+        "{{COMMITS}}": commits_value,
+        "{{FOLLOWERS}}": followers_value,
+        "{{REPOS_DOTS}}": dot_leader("Repos", repos_value),
+        "{{COMMITS_DOTS}}": dot_leader("Commits", commits_value),
+        "{{FOLLOWERS_DOTS}}": dot_leader("Followers", followers_value),
     }
 
     with open("assets/profile-card-template.svg", "r", encoding="utf-8") as f:
