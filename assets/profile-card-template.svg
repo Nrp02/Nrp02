@@ -30,11 +30,11 @@
   <g>
     <text x="470" y="106"><tspan class="dim">. </tspan><tspan class="key">OS</tspan><tspan class="dim">: ............................. </tspan></text>
     <text x="1060" y="106" text-anchor="end" class="value">macOS (Apple Silicon)</text>
-    <text x="470" y="134"><tspan class="dim">. </tspan><tspan class="key">Role</tspan><tspan class="dim">: ............................... </tspan></text>
-    <text x="1060" y="134" text-anchor="end" class="value">Student / Learner</text>
+    <text x="470" y="134"><tspan class="dim">. </tspan><tspan class="key">Role</tspan><tspan class="dim">: ......................................... </tspan></text>
+    <text x="1060" y="134" text-anchor="end" class="value">Student</text>
     <text x="470" y="162"><tspan class="dim">. </tspan><tspan class="key">University</tspan><tspan class="dim">: ............. </tspan></text>
     <text x="1060" y="162" text-anchor="end" class="value">Kasetsart University Sriracha</text>
-    <text x="470" y="190"><tspan class="dim">. </tspan><tspan class="key">Location</tspan><tspan class="dim">: .................................... </tspan></text>
+    <text x="470" y="190"><tspan class="dim">. </tspan><tspan class="key">Location</tspan><tspan class="dim">: ..................................... </tspan></text>
     <text x="1060" y="190" text-anchor="end" class="value">Thailand</text>
     <text x="470" y="218"><tspan class="dim">. </tspan><tspan class="key">Editor</tspan><tspan class="dim">: ....................................... </tspan></text>
     <text x="1060" y="218" text-anchor="end" class="value">VS Code</text>
