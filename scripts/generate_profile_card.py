@@ -12,11 +12,13 @@ TOKEN = os.environ.get("GITHUB_TOKEN")
 API_ROOT = "https://api.github.com"
 TOP_N_LANGUAGES = 4
 
-BAR_X = 470
-BAR_WIDTH = 590
-BAR_HEIGHT = 6
+BULLET_X = 470 
+NAME_MAX_CHARS = 12  
+BAR_X = 620
+BAR_WIDTH = 340
+BAR_HEIGHT = 12
 BAR_FIRST_Y = 316
-BAR_ROW_SPACING = 34
+BAR_ROW_SPACING = 32
 BAR_COLORS = ["#93a6ef", "#6d7fd6", "#dbe2fb", "#4a5386"]
 
 ROW_X = 470
@@ -73,22 +75,23 @@ def fetch_languages(repo_full_name):
 def build_language_stack_svg(language_bytes):
     top = sorted(language_bytes.items(), key=lambda kv: kv[1], reverse=True)[:TOP_N_LANGUAGES]
     if not top:
-        return f'<text x="{BAR_X}" y="{BAR_FIRST_Y}"><tspan class="dim">. </tspan><tspan class="value">No language data yet</tspan></text>'
+        return f'<text x="{BULLET_X}" y="{BAR_FIRST_Y}"><tspan class="dim">. </tspan><tspan class="value">No language data yet</tspan></text>'
 
     shown_total = sum(count for _, count in top)
     rows = []
     for i, (lang, count) in enumerate(top):
         pct = round(100 * count / shown_total) if shown_total else 0
         y = BAR_FIRST_Y + i * BAR_ROW_SPACING
-        bar_y = y + BAR_HEIGHT
+        bar_y = y - BAR_HEIGHT  # centres the bar on the row's text
         fill_width = round(BAR_WIDTH * pct / 100)
         color = BAR_COLORS[i % len(BAR_COLORS)]
+        name = lang if len(lang) <= NAME_MAX_CHARS else lang[: NAME_MAX_CHARS - 1] + "…"
         rows.append(
-            f'<text x="{BAR_X}" y="{y}"><tspan class="key">{escape(lang)}</tspan></text>'
-            f'<text x="{BAR_X + BAR_WIDTH}" y="{y}" text-anchor="end">'
-            f'<tspan class="value">{pct}%</tspan></text>'
-            f'<rect x="{BAR_X}" y="{bar_y}" width="{BAR_WIDTH}" height="{BAR_HEIGHT}" rx="0" fill="#3c4670"/>'
+            f'<text x="{BULLET_X}" y="{y}"><tspan class="dim">. </tspan>'
+            f'<tspan class="key">{escape(name)}</tspan></text>'
             f'<rect x="{BAR_X}" y="{bar_y}" width="{fill_width}" height="{BAR_HEIGHT}" rx="0" fill="{color}"/>'
+            f'<text x="{VALUE_RIGHT}" y="{y}" text-anchor="end">'
+            f'<tspan class="value">{pct}%</tspan></text>'
         )
     return "\n    ".join(rows)
 
